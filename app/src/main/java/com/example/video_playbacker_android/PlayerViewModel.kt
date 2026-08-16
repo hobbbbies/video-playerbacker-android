@@ -1,0 +1,41 @@
+package com.example.video_playbacker_android
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.video_playbacker_android.network.VideoItem
+import com.example.video_playbacker_android.network.VideoSearchSnippet
+import com.example.video_playbacker_android.network.YoutubeDataAPI
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.io.IOException
+
+sealed interface YoutubeDataUiState {
+    data class Success(val videos: List<VideoItem>) : YoutubeDataUiState
+    object Error : YoutubeDataUiState
+    object Loading : YoutubeDataUiState
+}
+
+class PlayerViewModel(): ViewModel() {
+    private val _searchUiState = MutableStateFlow<YoutubeDataUiState>(YoutubeDataUiState.Loading)
+    val searchUiState = _searchUiState.asStateFlow()
+
+    private val _chosenVideo = MutableStateFlow<VideoSearchSnippet?>(null)
+    val chosenVideo = _chosenVideo.asStateFlow()
+
+    fun getVideosBySearch() {
+        viewModelScope.launch {
+            try {
+                val key = BuildConfig.YOUTUBE_DATA_API_KEY
+                val searchResult = YoutubeDataAPI.retrofitService.search(key, "", "Video")
+                _searchUiState.value = YoutubeDataUiState.Success(searchResult.items)
+            } catch(e: IOException) {
+                _searchUiState.value = YoutubeDataUiState.Error
+            }
+        }
+    }
+
+    fun setChosenVideo(video: VideoSearchSnippet) {
+        _chosenVideo.value = video
+    }
+}
