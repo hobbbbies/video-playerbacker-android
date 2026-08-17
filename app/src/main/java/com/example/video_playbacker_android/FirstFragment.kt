@@ -7,9 +7,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.video_playbacker_android.ui.VideoListAdapter
 import com.example.video_playbacker_android.databinding.FragmentFirstBinding
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import kotlinx.coroutines.launch
 
 private const val TAG = "Main fragment"
 class FirstFragment : Fragment() {
@@ -44,9 +50,51 @@ class FirstFragment : Fragment() {
         rvVideos.adapter = adapter
         rvVideos.layoutManager = LinearLayoutManager(requireContext())
 
-        val searchBar = binding.videoSearch // Add a button that submits search on click
+        val searchBtn = binding.searchButton
+        val searchBar = binding.videoSearch
+        val errorText = binding.errorText
+        searchBtn.setOnClickListener {
+            val query = searchBar.text.toString()
+            viewModel.getVideosBySearch(query)
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.searchUiState.collect { state ->
+                    when (state) {
+                        is YoutubeDataUiState.Success -> {
+                            // Extract the snippets from the VideoItems and submit them to the adapter
+                            adapter.submitList(state.videos.map { it })
+                        }
+
+                        is YoutubeDataUiState.Loading -> {
+                            // Show a progress bar if you have one
+                        }
+
+                        is YoutubeDataUiState.Error -> {
+                            // Show an error message
+                            errorText.text = state.errorMsg
+                        }
+                    }
+                }
+            }
+        }
 
         lifecycle.addObserver(binding.youtubePlayerView)
+
+        binding.youtubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+            override fun onReady(youTubePlayer: YouTubePlayer) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.chosenVideo.collect { video ->
+                            video?.id?.videoId?.let { id ->
+                                youTubePlayer.loadVideo(id, 0f)
+                            }
+                        }
+                    }
+                }
+            }
+        })
     }
 
     override fun onDestroyView() {

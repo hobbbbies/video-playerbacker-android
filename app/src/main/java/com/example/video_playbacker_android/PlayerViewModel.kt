@@ -12,7 +12,7 @@ import java.io.IOException
 
 sealed interface YoutubeDataUiState {
     data class Success(val videos: List<VideoItem>) : YoutubeDataUiState
-    object Error : YoutubeDataUiState
+    data class Error(val errorMsg: String) : YoutubeDataUiState
     object Loading : YoutubeDataUiState
 }
 
@@ -20,22 +20,22 @@ class PlayerViewModel(): ViewModel() {
     private val _searchUiState = MutableStateFlow<YoutubeDataUiState>(YoutubeDataUiState.Loading)
     val searchUiState = _searchUiState.asStateFlow()
 
-    private val _chosenVideo = MutableStateFlow<VideoSearchSnippet?>(null)
+    private val _chosenVideo = MutableStateFlow<VideoItem?>(null)
     val chosenVideo = _chosenVideo.asStateFlow()
 
-    fun getVideosBySearch() {
+    fun getVideosBySearch(query: String) {
         viewModelScope.launch {
             try {
                 val key = BuildConfig.YOUTUBE_DATA_API_KEY
-                val searchResult = YoutubeDataAPI.retrofitService.search(key, "", "Video")
+                val searchResult = YoutubeDataAPI.retrofitService.search(key, query, maxResults = 3)
                 _searchUiState.value = YoutubeDataUiState.Success(searchResult.items)
             } catch(e: IOException) {
-                _searchUiState.value = YoutubeDataUiState.Error
+                _searchUiState.value = YoutubeDataUiState.Error(e.message ?: "An error occurred.")
             }
         }
     }
 
-    fun setChosenVideo(video: VideoSearchSnippet) {
+    fun setChosenVideo(video: VideoItem) {
         _chosenVideo.value = video
     }
 }

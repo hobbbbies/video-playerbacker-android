@@ -13,15 +13,26 @@
 
         <EditText
             android:id="@+id/video_search"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:hint="Search for a video..."
             android:inputType="text"
             android:textColor="#000000"
             android:textSize="16sp"
+            app:layout_constraintBottom_toTopOf="@id/youtube_player_view"
+            app:layout_constraintEnd_toStartOf="@+id/search_button"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/search_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Search"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toTopOf="@id/youtube_player_view"
-            tools:layout_editor_absoluteX="16dp" />
+             />
 
         <com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
             android:id="@+id/youtube_player_view"
@@ -34,19 +45,27 @@
             app:layout_constraintTop_toTopOf="parent"
 
             app:autoPlay="true"
-            app:videoId="" />
+            app:videoId="0" />
 
 
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvVideos"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="match_parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/youtube_player_view" />
 
+        <TextView
+            android:id="@+id/error_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/rvVideos" />
             <!--
             Render a list of videos from the search
             Each item shows thumbnail with text beside it (just text for now maybe)

@@ -7,13 +7,12 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.example.video_playbacker_android.network.VideoSearchSnippet
 import com.example.video_playbacker_android.R
+import com.example.video_playbacker_android.network.VideoItem
 
-// TODO: Adapt this for videos
 class VideoListAdapter(
-    private val onClick: (video: VideoSearchSnippet) -> Unit
-) : ListAdapter<VideoSearchSnippet, VideoListAdapter.ViewHolder>(VideoDiffCallback) {
+    private val onClick: (video: VideoItem) -> Unit
+) : ListAdapter<VideoItem, VideoListAdapter.ViewHolder>(VideoDiffCallback) {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvVideoName: TextView = view.findViewById(R.id.tvVideoName)
@@ -26,16 +25,16 @@ class VideoListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val video = getItem(position)
-        holder.tvVideoName.text = video.title
+        holder.tvVideoName.text = video.snippet.title
         holder.itemView.setOnClickListener { onClick(video) }
     }
 
-    companion object VideoDiffCallback : DiffUtil.ItemCallback<VideoSearchSnippet>() {
-        override fun areItemsTheSame(oldItem: VideoSearchSnippet, newItem: VideoSearchSnippet): Boolean {
+    companion object VideoDiffCallback : DiffUtil.ItemCallback<VideoItem>() {
+        override fun areItemsTheSame(oldItem: VideoItem, newItem: VideoItem): Boolean {
             return oldItem == newItem
         }
 
-        override fun areContentsTheSame(oldItem: VideoSearchSnippet, newItem: VideoSearchSnippet): Boolean {
+        override fun areContentsTheSame(oldItem: VideoItem, newItem: VideoItem): Boolean {
             return oldItem == newItem
         }
     }
