@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -13,6 +14,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.video_playbacker_android.ui.VideoListAdapter
 import com.example.video_playbacker_android.databinding.FragmentFirstBinding
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import kotlinx.coroutines.launch
@@ -21,6 +24,9 @@ private const val TAG = "Main fragment"
 class FirstFragment : Fragment() {
     private val viewModel: PlayerViewModel by activityViewModels()
     private var _binding: FragmentFirstBinding? = null
+    var youTubePlayer: YouTubePlayer? = null
+    var currentSecond: Float = 0f
+    var playerState: PlayerConstants.PlayerState = PlayerConstants.PlayerState.UNKNOWN
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -48,11 +54,10 @@ class FirstFragment : Fragment() {
         }
 
         rvVideos.adapter = adapter
-        rvVideos.layoutManager = LinearLayoutManager(requireContext())
+        rvVideos.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
         val searchBtn = binding.searchButton
         val searchBar = binding.videoSearch
-        val errorText = binding.errorText
         searchBtn.setOnClickListener {
             val query = searchBar.text.toString()
             viewModel.getVideosBySearch(query)
@@ -64,6 +69,7 @@ class FirstFragment : Fragment() {
                     when (state) {
                         is YoutubeDataUiState.Success -> {
                             // Extract the snippets from the VideoItems and submit them to the adapter
+                            binding.videoSelectTitle.visibility = View.VISIBLE
                             adapter.submitList(state.videos.map { it })
                         }
 
@@ -73,7 +79,7 @@ class FirstFragment : Fragment() {
 
                         is YoutubeDataUiState.Error -> {
                             // Show an error message
-                            errorText.text = state.errorMsg
+                            Toast.makeText(requireContext(), state.errorMsg, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -84,6 +90,7 @@ class FirstFragment : Fragment() {
 
         binding.youtubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
             override fun onReady(youTubePlayer: YouTubePlayer) {
+                this@FirstFragment.youTubePlayer = youTubePlayer
                 viewLifecycleOwner.lifecycleScope.launch {
                     viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.chosenVideo.collect { video ->
@@ -94,7 +101,34 @@ class FirstFragment : Fragment() {
                     }
                 }
             }
+
+            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
+                super.onCurrentSecond(youTubePlayer, second)
+                currentSecond = second
+            }
+
+            override fun onStateChange(
+                youTubePlayer: YouTubePlayer,
+                state: PlayerConstants.PlayerState
+            ) {
+                super.onStateChange(youTubePlayer, state)
+                playerState = state
+            }
         })
+
+        binding.dashboard.rewind.setOnClickListener { it ->
+            val rewindTime = (binding.dashboard.skipTimeInput.text).toString().toFloat() ?: 5f
+            youTubePlayer?.seekTo(currentSecond - rewindTime)
+        }
+
+        binding.dashboard.fastForward.setOnClickListener { it ->
+            val ffTime = (binding.dashboard.skipTimeInput.text).toString().toFloat() ?: 5f
+            youTubePlayer?.seekTo(currentSecond + ffTime)
+        }
+
+        binding.dashboard.pause.setOnClickListener { it ->
+            if (playerState == PlayerState.PLAYING) youTubePlayer?.pause() else youTubePlayer?.play()
+        }
     }
 
     override fun onDestroyView() {
