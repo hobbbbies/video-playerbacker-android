@@ -1,56 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center"
-    >
+    android:layout_height="wrap_content">
 
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/rewind"
-        android:layout_marginHorizontal="10dp"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:contentDescription="rewind"
-        android:background="@drawable/rewind_button"
-        />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/pause"
-        android:layout_marginHorizontal="10dp"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:contentDescription="pause"
-        android:background="@drawable/pause"
-        />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/fast_forward"
-        android:layout_marginHorizontal="10dp"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:contentDescription="ff"
-        android:background="@drawable/fast_forward"
-        android:backgroundTint="@null"/>
-
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/time_controls"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Skip Time: "
-        android:textSize="14sp"
-        />
-    <EditText
-        android:id="@+id/skip_time_input"
-        android:layout_width="0dp"
-        android:layout_weight="1"
-        android:layout_height="30dp"
-        android:inputType="number"
-        android:background="@drawable/input_style"
         android:gravity="center"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:text="5"
-        />
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/time_controls"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-</LinearLayout>
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/rewind"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="10dp"
+            android:background="@drawable/rewind_button"
+            android:contentDescription="rewind" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/pause"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="10dp"
+            android:background="@drawable/pause"
+            android:contentDescription="pause" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/fast_forward"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="10dp"
+            android:background="@drawable/fast_forward"
+            android:backgroundTint="@null"
+            android:contentDescription="ff" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Skip Time: "
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/skip_time_input"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
+            android:background="@drawable/input_style"
+            android:gravity="center"
+            android:inputType="number"
+            android:text="5"
+            android:textColor="@color/white"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/loop_controls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="@id/time_controls">
+
+        <TextView
+            android:id="tvCurrentText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="12dp"
+            android:text="Current Loop: --" />
+
+        <Button
+            android:id="@+id/loop_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="12dp"
+            android:background="@drawable/generic_button"
+            android:text="Start Loop" />
+
+        <Button
+            android:id="@+id/clear_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/generic_button"
+            android:text="CLR" />
+
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

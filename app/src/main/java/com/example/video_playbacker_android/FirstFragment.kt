@@ -14,6 +14,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.video_playbacker_android.ui.VideoListAdapter
 import com.example.video_playbacker_android.databinding.FragmentFirstBinding
+import com.example.video_playbacker_android.player.VideoPlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
@@ -27,6 +28,7 @@ class FirstFragment : Fragment() {
     var youTubePlayer: YouTubePlayer? = null
     var currentSecond: Float = 0f
     var playerState: PlayerConstants.PlayerState = PlayerConstants.PlayerState.UNKNOWN
+    var videoPlayer: VideoPlayer? = null
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -90,21 +92,13 @@ class FirstFragment : Fragment() {
 
         binding.youtubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
             override fun onReady(youTubePlayer: YouTubePlayer) {
-                this@FirstFragment.youTubePlayer = youTubePlayer
-                viewLifecycleOwner.lifecycleScope.launch {
-                    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.chosenVideo.collect { video ->
-                            video?.id?.videoId?.let { id ->
-                                youTubePlayer.loadVideo(id, 0f)
-                            }
-                        }
-                    }
-                }
+                videoPlayer = VideoPlayer(youTubePlayer, viewModel, lifecycleScope, viewLifecycleOwner)
             }
 
             override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
                 super.onCurrentSecond(youTubePlayer, second)
-                currentSecond = second
+                videoPlayer?.currentSecond = second
+                videoPlayer?.checkLoop()
             }
 
             override fun onStateChange(
@@ -112,22 +106,30 @@ class FirstFragment : Fragment() {
                 state: PlayerConstants.PlayerState
             ) {
                 super.onStateChange(youTubePlayer, state)
-                playerState = state
+                videoPlayer?.playerState = state
             }
         })
 
-        binding.dashboard.rewind.setOnClickListener { it ->
-            val rewindTime = (binding.dashboard.skipTimeInput.text).toString().toFloat() ?: 5f
-            youTubePlayer?.seekTo(currentSecond - rewindTime)
+        // Dashboard listeners
+        binding.dashboard.rewind.setOnClickListener {
+            val rewindTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
+            videoPlayer?.seekTo(currentSecond - rewindTime)
         }
 
-        binding.dashboard.fastForward.setOnClickListener { it ->
-            val ffTime = (binding.dashboard.skipTimeInput.text).toString().toFloat() ?: 5f
-            youTubePlayer?.seekTo(currentSecond + ffTime)
+        binding.dashboard.fastForward.setOnClickListener {
+            val ffTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
+            videoPlayer?.seekTo(currentSecond + ffTime)
         }
 
-        binding.dashboard.pause.setOnClickListener { it ->
-            if (playerState == PlayerState.PLAYING) youTubePlayer?.pause() else youTubePlayer?.play()
+        binding.dashboard.pause.setOnClickListener {
+            videoPlayer?.pauseOrPlay()
+        }
+
+        binding.dashboard.loopButton.setOnClickListener {
+            val loopStarted = videoPlayer?.handleLoop() == true
+            binding.dashboard.loopButton.setText(
+                if (loopStarted) R.string.stop_loop else R.string.start_loop
+            )
         }
     }
 
