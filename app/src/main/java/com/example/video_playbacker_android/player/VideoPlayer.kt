@@ -1,5 +1,6 @@
 package com.example.video_playbacker_android.player
 
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.LifecycleOwner
@@ -10,6 +11,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstan
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import kotlinx.coroutines.launch
 
+private const val TAG = "VideoPlayer"
 class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewModel: PlayerViewModel, private val scope: LifecycleCoroutineScope, lifecycleOwner: LifecycleOwner) {
     var currentSecond: Float = 0f
     var playerState: PlayerConstants.PlayerState = PlayerConstants.PlayerState.UNKNOWN
@@ -38,21 +40,21 @@ class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewMode
         if (playerState == PlayerState.PLAYING) youtubePlayer.pause() else youtubePlayer.play()
     }
 
-    fun startLoop(timestamp: Float) {
-        loopStart = timestamp
-    }
-
-    fun stopLoop(timestamp: Float) {
-        loopEnd = timestamp
-    }
-
     fun handleLoop(): Boolean {
         if (!recordingLoop) {
             loopStart = currentSecond
+            loopEnd = null
+            Log.i(TAG, "handleLoop: Starting loop at: $loopStart")
             recordingLoop = true
         } else {
             loopEnd = currentSecond
-            recordingLoop = false
+            if (loopStart === null) {
+                throw Error("loopStart was null when trying to end loop")
+            }
+            if (loopEnd!! - loopStart!! > 1.0) {
+                Log.i(TAG, "handleLoop: ending loop at: $loopEnd")
+                recordingLoop = false
+            }
         }
 
         checkLoop() // should seek instantly
@@ -63,7 +65,9 @@ class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewMode
         if (loopStart == null || loopEnd == null) {
             return
         }
-        if (currentSecond >= loopEnd!!) {
+
+        if (currentSecond >= loopEnd!! || currentSecond < loopStart!!) {
+            Log.i(TAG, "checkLoop: LOOPING")
             seekTo(loopStart!!)
         }
     }
