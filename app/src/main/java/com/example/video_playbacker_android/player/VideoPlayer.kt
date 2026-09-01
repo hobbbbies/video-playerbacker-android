@@ -14,11 +14,14 @@ import kotlinx.coroutines.launch
 private const val TAG = "VideoPlayer"
 class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewModel: PlayerViewModel, private val scope: LifecycleCoroutineScope, lifecycleOwner: LifecycleOwner) {
     var currentSecond: Float = 0f
+        private set
     var playerState: PlayerConstants.PlayerState = PlayerConstants.PlayerState.UNKNOWN
-
+        private set
+    var loopStart: Float? = null
+        private set
+    var loopEnd: Float? = null
+        private set
     private var recordingLoop = false
-    private var loopStart: Float? = null
-    private var loopEnd: Float? = null
 
     init {
         scope.launch {
@@ -70,5 +73,10 @@ class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewMode
             Log.i(TAG, "checkLoop: LOOPING")
             seekTo(loopStart!!)
         }
+    }
+
+    fun clearLoop() {
+        loopStart = null
+        loopEnd = null
     }
 }

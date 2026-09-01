@@ -25,9 +25,6 @@ private const val TAG = "Main fragment"
 class FirstFragment : Fragment() {
     private val viewModel: PlayerViewModel by activityViewModels()
     private var _binding: FragmentFirstBinding? = null
-    var youTubePlayer: YouTubePlayer? = null
-    var currentSecond: Float = 0f
-    var playerState: PlayerConstants.PlayerState = PlayerConstants.PlayerState.UNKNOWN
     var videoPlayer: VideoPlayer? = null
 
     // This property is only valid between onCreateView and
@@ -71,7 +68,7 @@ class FirstFragment : Fragment() {
                     when (state) {
                         is YoutubeDataUiState.Success -> {
                             // Extract the snippets from the VideoItems and submit them to the adapter
-                            binding.videoSelectTitle.visibility = View.VISIBLE
+                            if(state.videos.isNotEmpty()) binding.videoSelectTitle.visibility = View.VISIBLE
                             adapter.submitList(state.videos.map { it })
                         }
 
@@ -97,8 +94,9 @@ class FirstFragment : Fragment() {
 
             override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
                 super.onCurrentSecond(youTubePlayer, second)
-                videoPlayer?.currentSecond = second
+                //videoPlayer?.currentSecond = second
                 videoPlayer?.checkLoop()
+                binding.dashboard.progressBar.progress = 25
             }
 
             override fun onStateChange(
@@ -113,12 +111,14 @@ class FirstFragment : Fragment() {
         // Dashboard listeners
         binding.dashboard.rewind.setOnClickListener {
             val rewindTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
-            videoPlayer?.seekTo(currentSecond - rewindTime)
+            val current = videoPlayer?.currentSecond ?: 0f
+            videoPlayer?.seekTo(current - rewindTime)
         }
 
         binding.dashboard.fastForward.setOnClickListener {
             val ffTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
-            videoPlayer?.seekTo(currentSecond + ffTime)
+            val current = videoPlayer?.currentSecond ?: 0f
+            videoPlayer?.seekTo(current + ffTime)
         }
 
         binding.dashboard.pause.setOnClickListener {
@@ -126,10 +126,24 @@ class FirstFragment : Fragment() {
         }
 
         binding.dashboard.loopButton.setOnClickListener {
-            val loopStarted = videoPlayer?.handleLoop() == true
+            val isRecording = videoPlayer?.handleLoop() == true
             binding.dashboard.loopButton.setText(
-                if (loopStarted) R.string.stop_loop else R.string.start_loop
+                if (isRecording) R.string.stop_loop else R.string.start_loop
             )
+            
+            val start = videoPlayer?.loopStart
+            val end = videoPlayer?.loopEnd
+            
+            binding.dashboard.tvCurrentText.text = when {
+                isRecording -> "Current Loop: $start to ..."
+                start != null && end != null -> getString(R.string.current_loop_value, start, end)
+                else -> getString(R.string.current_loop_null_value)
+            }
+        }
+
+        binding.dashboard.clearButton.setOnClickListener {
+            binding.dashboard.tvCurrentText.text = getString(R.string.current_loop_null_value)
+            videoPlayer?.clearLoop()
         }
     }
 
