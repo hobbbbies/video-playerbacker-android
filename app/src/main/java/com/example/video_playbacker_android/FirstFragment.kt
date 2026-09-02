@@ -19,13 +19,15 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstan
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerTracker
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val TAG = "Main fragment"
 class FirstFragment : Fragment() {
     private val viewModel: PlayerViewModel by activityViewModels()
     private var _binding: FragmentFirstBinding? = null
-    var videoPlayer: VideoPlayer? = null
+    private var videoPlayer: VideoPlayer? = null
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -94,9 +96,12 @@ class FirstFragment : Fragment() {
 
             override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
                 super.onCurrentSecond(youTubePlayer, second)
-                //videoPlayer?.currentSecond = second
-                videoPlayer?.checkLoop()
-                binding.dashboard.progressBar.progress = 25
+                val player = videoPlayer ?: return
+                player.currentSecond = second
+                player.checkLoop()
+                val progress = ((player.currentSecond / player.videoDuration) * 100).roundToInt()
+                Log.i(TAG, "onCurrentSecond: second: ${player?.currentSecond}, duration: ${player?.videoDuration}. Progress: $progress")
+                binding.dashboard.progressBar.progress = progress
             }
 
             override fun onStateChange(
@@ -105,6 +110,10 @@ class FirstFragment : Fragment() {
             ) {
                 super.onStateChange(youTubePlayer, state)
                 videoPlayer?.playerState = state
+            }
+
+            override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
+                videoPlayer?.videoDuration = duration
             }
         })
 
@@ -127,28 +136,32 @@ class FirstFragment : Fragment() {
 
         binding.dashboard.loopButton.setOnClickListener {
             val isRecording = videoPlayer?.handleLoop() == true
-            binding.dashboard.loopButton.setText(
-                if (isRecording) R.string.stop_loop else R.string.start_loop
-            )
-            
-            val start = videoPlayer?.loopStart
-            val end = videoPlayer?.loopEnd
-            
-            binding.dashboard.tvCurrentText.text = when {
-                isRecording -> "Current Loop: $start to ..."
-                start != null && end != null -> getString(R.string.current_loop_value, start, end)
-                else -> getString(R.string.current_loop_null_value)
-            }
+            stopStartRecording(isRecording)
         }
 
         binding.dashboard.clearButton.setOnClickListener {
-            binding.dashboard.tvCurrentText.text = getString(R.string.current_loop_null_value)
             videoPlayer?.clearLoop()
+            stopStartRecording(false)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    fun stopStartRecording(isRecording: Boolean) {
+        binding.dashboard.loopButton.setText(
+            if (isRecording) R.string.stop_loop else R.string.start_loop
+        )
+
+        val start = videoPlayer?.loopStart
+        val end = videoPlayer?.loopEnd
+
+        binding.dashboard.tvCurrentText.text = when {
+            isRecording -> "Current Loop: $start to ..."
+            start != null && end != null -> getString(R.string.current_loop_value, start, end)
+            else -> getString(R.string.current_loop_null_value)
+        }
     }
 }

@@ -9,14 +9,17 @@ import com.example.video_playbacker_android.PlayerViewModel
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerTracker
 import kotlinx.coroutines.launch
 
 private const val TAG = "VideoPlayer"
-class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewModel: PlayerViewModel, private val scope: LifecycleCoroutineScope, lifecycleOwner: LifecycleOwner) {
+class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewModel: PlayerViewModel, private val scope: LifecycleCoroutineScope, private val lifecycleOwner: LifecycleOwner) {
     var currentSecond: Float = 0f
-        private set
+        internal set
     var playerState: PlayerConstants.PlayerState = PlayerConstants.PlayerState.UNKNOWN
-        private set
+        internal set
+    var videoDuration: Float = 0f
+        internal set
     var loopStart: Float? = null
         private set
     var loopEnd: Float? = null
@@ -54,13 +57,13 @@ class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewMode
             if (loopStart === null) {
                 throw Error("loopStart was null when trying to end loop")
             }
-            if (loopEnd!! - loopStart!! > 1.0) {
+            if (currentSecond - loopStart!! > 1.0) {
+                loopEnd = currentSecond
                 Log.i(TAG, "handleLoop: ending loop at: $loopEnd")
                 recordingLoop = false
             }
         }
 
-        checkLoop() // should seek instantly
         return recordingLoop // represents if a loop was started or not
     }
 
@@ -76,6 +79,7 @@ class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewMode
     }
 
     fun clearLoop() {
+        recordingLoop = false
         loopStart = null
         loopEnd = null
     }

@@ -55,7 +55,7 @@
             android:layout_weight="1"
             android:background="@drawable/input_style"
             android:gravity="center"
-            android:inputType="number"
+            android:inputType="numberDecimal"
             android:text="5"
             android:textColor="@color/white"
              />
@@ -125,7 +125,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             style="@android:style/Widget.ProgressBar.Horizontal"
-            android:progress="25"/>
+
+            android:progress="0"/>
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
