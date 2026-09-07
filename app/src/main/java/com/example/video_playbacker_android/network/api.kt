@@ -1,13 +1,13 @@
 package com.example.video_playbacker_android.network
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 private const val BASE_URL = "https://www.googleapis.com/youtube/v3/"
@@ -48,3 +48,11 @@ object YoutubeDataAPI {
         retrofit.create(YoutubeDataAPIService::class.java)
     }
 }
+
+interface pythonAPIService {
+    @POST("beats")
+    suspend fun beats(
+        @Query("url") url: String
+    ): BeatsResponse
+}
+

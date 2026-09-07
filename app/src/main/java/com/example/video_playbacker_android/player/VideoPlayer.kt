@@ -12,6 +12,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerTracker
 import kotlinx.coroutines.launch
 
+
 private const val TAG = "VideoPlayer"
 class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewModel: PlayerViewModel, private val scope: LifecycleCoroutineScope, private val lifecycleOwner: LifecycleOwner) {
     var currentSecond: Float = 0f
@@ -82,5 +83,9 @@ class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewMode
         recordingLoop = false
         loopStart = null
         loopEnd = null
+    }
+
+    fun convertToMp3() {
+
     }
 }
