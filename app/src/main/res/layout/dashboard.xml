@@ -118,7 +118,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/loop_controls"
         android:layout_marginTop="50dp"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toTopOf="@id/beats_section">
 
         <ProgressBar
             android:id="@+id/progress_bar"
@@ -127,6 +127,19 @@
             style="@android:style/Widget.ProgressBar.Horizontal"
 
             android:progress="0"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/beats_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/progress_section"
+        app:layout_constraintBottom_toBottomOf="parent"
+        >
+
+
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

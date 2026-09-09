@@ -85,7 +85,7 @@ class VideoPlayer(private val youtubePlayer: YouTubePlayer, private val viewMode
         loopEnd = null
     }
 
-    fun convertToMp3() {
+    fun addBeatManager() {
 
     }
 }

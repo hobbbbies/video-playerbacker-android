@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContentProviderCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -14,7 +15,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.video_playbacker_android.ui.VideoListAdapter
 import com.example.video_playbacker_android.databinding.FragmentFirstBinding
+import com.example.video_playbacker_android.player.BeatManager
 import com.example.video_playbacker_android.player.VideoPlayer
+import com.example.video_playbacker_android.ui.BeatView
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
@@ -28,6 +31,7 @@ class FirstFragment : Fragment() {
     private val viewModel: PlayerViewModel by activityViewModels()
     private var _binding: FragmentFirstBinding? = null
     private var videoPlayer: VideoPlayer? = null
+    private var beatManager: BeatManager? = null
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -80,6 +84,42 @@ class FirstFragment : Fragment() {
 
                         is YoutubeDataUiState.Error -> {
                             // Show an error message
+                            Toast.makeText(requireContext(), state.errorMsg, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.beatsUiState.collect { state ->
+                    when (state) {
+                        is BeatsDataUiState.Success -> {
+                            val timeSig = 4
+                            val layoutBinding = binding.dashboard.beatsSection
+                            val beatViews = ArrayList<BeatView>(timeSig)
+
+                            layoutBinding.removeAllViews()
+                            for (i in 1..timeSig) {
+                                val beatView = BeatView(requireContext())
+                                beatViews.add(beatView)
+                                layoutBinding.addView(beatView)
+                            }
+                            beatManager = BeatManager(viewLifecycleOwner.lifecycleScope, state.bpm, state.beatFrames, beatViews)
+                            Log.i(TAG, "onViewCreated: state.bpm: ${state.bpm}")
+
+                            // handle beats in UI
+                        }
+
+                        is BeatsDataUiState.Loading -> {
+                            // Show a progress bar if you have one
+                            beatManager = null
+                        }
+
+                        is BeatsDataUiState.Error -> {
+                            // Show an error message
+                            beatManager = null
                             Toast.makeText(requireContext(), state.errorMsg, Toast.LENGTH_SHORT).show()
                         }
                     }

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.video_playbacker_android.network.VideoItem
 import com.example.video_playbacker_android.network.VideoSearchSnippet
 import com.example.video_playbacker_android.network.YoutubeDataAPI
+import com.example.video_playbacker_android.network.pythonAPI
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,10 +23,18 @@ sealed interface YoutubeDataUiState {
     object Loading : YoutubeDataUiState
 }
 
+sealed interface BeatsDataUiState {
+    data class Success(val bpm: Float, val beatFrames: List<Int>) : BeatsDataUiState
+    data class Error(val errorMsg: String) : BeatsDataUiState
+    object Loading : BeatsDataUiState
+}
+
 private const val TAG = "Viewmodel"
 class PlayerViewModel(): ViewModel() {
     private val _searchUiState = MutableStateFlow<YoutubeDataUiState>(YoutubeDataUiState.Loading)
     val searchUiState = _searchUiState.asStateFlow()
+    private val _beatsUiState = MutableStateFlow<BeatsDataUiState>(BeatsDataUiState.Loading)
+    val beatsUiState = _beatsUiState.asStateFlow()
 
     private val _chosenVideo = MutableStateFlow<VideoItem?>(null)
     val chosenVideo = _chosenVideo.asStateFlow()
@@ -44,5 +53,19 @@ class PlayerViewModel(): ViewModel() {
 
     fun setChosenVideo(video: VideoItem) {
         _chosenVideo.value = video
+        val videoId = video.id.videoId
+        getBeats(videoId)
+    }
+
+    fun getBeats(videoId: String?) {
+        Log.i(TAG, "getBeats: getting beats...")
+        viewModelScope.launch {
+            try {
+                val result = pythonAPI.retrofitService.beats("https://www.youtube.com/watch?v=${videoId}")
+                _beatsUiState.value = BeatsDataUiState.Success(result.bpm, result.beatFrames)
+            } catch(e: IOException) {
+                _beatsUiState.value = BeatsDataUiState.Error(e.message ?: "An error occurred.")
+            }
+        }
     }
 }

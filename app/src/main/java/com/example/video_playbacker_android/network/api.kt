@@ -1,5 +1,6 @@
 package com.example.video_playbacker_android.network
 
+import com.example.video_playbacker_android.BuildConfig
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -10,7 +11,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
 
-private const val BASE_URL = "https://www.googleapis.com/youtube/v3/"
+private const val YT_URL = "https://www.googleapis.com/youtube/v3/"
 
 // Using ignoreUnknownKeys = true so the app doesn't crash if YouTube adds new fields
 private val networkJson = Json {
@@ -26,9 +27,15 @@ private val okHttpClient = OkHttpClient.Builder()
     .addInterceptor(loggingInterceptor)
     .build()
 
-private val retrofit = Retrofit.Builder()
+private val ytRetrofit = Retrofit.Builder()
     .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
-    .baseUrl(BASE_URL)
+    .baseUrl(YT_URL)
+    .client(okHttpClient)
+    .build()
+
+private val backendRetrofit = Retrofit.Builder()
+    .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
+    .baseUrl(BuildConfig.BACKEND_URL)
     .client(okHttpClient)
     .build()
 
@@ -45,7 +52,7 @@ interface YoutubeDataAPIService {
 
 object YoutubeDataAPI {
     val retrofitService: YoutubeDataAPIService by lazy {
-        retrofit.create(YoutubeDataAPIService::class.java)
+        ytRetrofit.create(YoutubeDataAPIService::class.java)
     }
 }
 
@@ -56,3 +63,8 @@ interface pythonAPIService {
     ): BeatsResponse
 }
 
+object pythonAPI {
+    val retrofitService: pythonAPIService by lazy {
+        backendRetrofit.create(pythonAPIService::class.java)
+    }
+}
