@@ -26,7 +26,7 @@ android {
         }
         val apiKey = properties.getProperty("YOUTUBE_DATA_API_KEY") ?: System.getenv("YOUTUBE_DATA_API_KEY") ?: ""
         buildConfigField("String", "YOUTUBE_DATA_API_KEY", "\"$apiKey\"")
-        buildConfigField("String", "BACKEND_URL", "\"http://192.168.51.229:8000\"")
+        buildConfigField("String", "BACKEND_URL", "\"http://192.168.51.227:8000\"")
     }
 
     buildTypes {

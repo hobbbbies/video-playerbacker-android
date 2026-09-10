@@ -2,10 +2,12 @@ package com.example.video_playbacker_android.ui
 
 import android.content.Context
 import android.util.AttributeSet
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.LinearLayout
 import com.example.video_playbacker_android.databinding.ViewBeatBinding
 
+private const val TAG = "BeatView"
 class BeatView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -20,6 +22,7 @@ class BeatView @JvmOverloads constructor(
 
     var isEnabledOption: Boolean = false
         set(value) {
+            Log.i(TAG, ": setting enabled to $value")
             field = value
             render()
         }
