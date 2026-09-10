@@ -3,12 +3,13 @@ package com.example.video_playbacker_android
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.video_playbacker_android.network.VideoItem
 import com.example.video_playbacker_android.network.VideoSearchSnippet
-import com.example.video_playbacker_android.network.YoutubeDataAPI
-import com.example.video_playbacker_android.network.pythonAPI
+import com.example.video_playbacker_android.network.YoutubeDataApi
+import com.example.video_playbacker_android.network.PythonApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,9 +44,9 @@ class PlayerViewModel(): ViewModel() {
         viewModelScope.launch {
             try {
                 val key = BuildConfig.YOUTUBE_DATA_API_KEY
-                val searchResult = YoutubeDataAPI.retrofitService.search(key, query, maxResults = 5)
+                val searchResult = YoutubeDataApi.retrofitService.search(key, query, maxResults = 5)
                 _searchUiState.value = YoutubeDataUiState.Success(searchResult.items)
-            } catch(e: IOException) {
+            } catch(e: Exception) {
                 _searchUiState.value = YoutubeDataUiState.Error(e.message ?: "An error occurred.")
             }
         }
@@ -54,16 +55,16 @@ class PlayerViewModel(): ViewModel() {
     fun setChosenVideo(video: VideoItem) {
         _chosenVideo.value = video
         val videoId = video.id.videoId
-        getBeats(videoId)
+        if (videoId != null) getBeats(videoId)
     }
 
-    fun getBeats(videoId: String?) {
+    fun getBeats(videoId: String) {
         Log.i(TAG, "getBeats: getting beats...")
         viewModelScope.launch {
             try {
-                val result = pythonAPI.retrofitService.beats("https://www.youtube.com/watch?v=${videoId}")
+                val result = PythonApi.retrofitService.beats(videoId)
                 _beatsUiState.value = BeatsDataUiState.Success(result.bpm, result.beatFrames)
-            } catch(e: IOException) {
+            } catch(e: Exception) {
                 _beatsUiState.value = BeatsDataUiState.Error(e.message ?: "An error occurred.")
             }
         }

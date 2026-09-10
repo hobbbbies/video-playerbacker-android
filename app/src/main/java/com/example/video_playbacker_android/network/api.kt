@@ -10,8 +10,10 @@ import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
+import java.util.concurrent.TimeUnit
 
 private const val YT_URL = "https://www.googleapis.com/youtube/v3/"
+private const val NETWORK_TIMEOUT = 30L
 
 // Using ignoreUnknownKeys = true so the app doesn't crash if YouTube adds new fields
 private val networkJson = Json {
@@ -25,8 +27,9 @@ private val loggingInterceptor = HttpLoggingInterceptor().apply {
 
 private val okHttpClient = OkHttpClient.Builder()
     .addInterceptor(loggingInterceptor)
+    .connectTimeout(NETWORK_TIMEOUT, TimeUnit.SECONDS)
+    .readTimeout(NETWORK_TIMEOUT, TimeUnit.SECONDS)
     .build()
-
 private val ytRetrofit = Retrofit.Builder()
     .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
     .baseUrl(YT_URL)
@@ -39,7 +42,7 @@ private val backendRetrofit = Retrofit.Builder()
     .client(okHttpClient)
     .build()
 
-interface YoutubeDataAPIService {
+interface YoutubeDataApiService {
     @GET("search")
     suspend fun search(
         @Query("key") key: String,
@@ -50,21 +53,21 @@ interface YoutubeDataAPIService {
     ): VideoSearchResponse
 }
 
-object YoutubeDataAPI {
-    val retrofitService: YoutubeDataAPIService by lazy {
-        ytRetrofit.create(YoutubeDataAPIService::class.java)
+object YoutubeDataApi {
+    val retrofitService: YoutubeDataApiService by lazy {
+        ytRetrofit.create(YoutubeDataApiService::class.java)
     }
 }
 
-interface pythonAPIService {
+interface PythonApiService {
     @POST("beats")
     suspend fun beats(
         @Query("url") url: String
     ): BeatsResponse
 }
 
-object pythonAPI {
-    val retrofitService: pythonAPIService by lazy {
-        backendRetrofit.create(pythonAPIService::class.java)
+object PythonApi {
+    val retrofitService: PythonApiService by lazy {
+        backendRetrofit.create(PythonApiService::class.java)
     }
 }

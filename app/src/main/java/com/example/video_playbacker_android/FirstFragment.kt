@@ -17,6 +17,7 @@ import com.example.video_playbacker_android.ui.VideoListAdapter
 import com.example.video_playbacker_android.databinding.FragmentFirstBinding
 import com.example.video_playbacker_android.player.BeatManager
 import com.example.video_playbacker_android.player.VideoPlayer
+import com.example.video_playbacker_android.ui.BeatCircleView
 import com.example.video_playbacker_android.ui.BeatView
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
@@ -98,11 +99,11 @@ class FirstFragment : Fragment() {
                         is BeatsDataUiState.Success -> {
                             val timeSig = 4
                             val layoutBinding = binding.dashboard.beatsSection
-                            val beatViews = ArrayList<BeatView>(timeSig)
+                            val beatViews = ArrayList<BeatCircleView>(timeSig)
 
                             layoutBinding.removeAllViews()
                             for (i in 1..timeSig) {
-                                val beatView = BeatView(requireContext())
+                                val beatView = BeatCircleView(requireContext())
                                 beatViews.add(beatView)
                                 layoutBinding.addView(beatView)
                             }
@@ -140,7 +141,6 @@ class FirstFragment : Fragment() {
                 player.currentSecond = second
                 player.checkLoop()
                 val progress = ((player.currentSecond / player.videoDuration) * 100).roundToInt()
-                Log.i(TAG, "onCurrentSecond: second: ${player?.currentSecond}, duration: ${player?.videoDuration}. Progress: $progress")
                 binding.dashboard.progressBar.progress = progress
             }
 
