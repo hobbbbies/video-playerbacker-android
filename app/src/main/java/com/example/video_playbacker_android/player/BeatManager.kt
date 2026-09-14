@@ -8,6 +8,7 @@ import com.example.video_playbacker_android.ui.BeatCircleView
 import com.example.video_playbacker_android.ui.BeatView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -16,13 +17,14 @@ private const val TAG = "BeatManager"
 class BeatManager(private val coroutineScope: CoroutineScope, private val bpm: Float, private val beatFrames: List<Int>, private val beatViews: List<BeatCircleView>, private val timeSig: Int = 4) {
     private val interval = 60 / bpm
     private var currBeat = 1
+    private var beatJob: Job? = null
 
     init {
         if (bpm < 1) {
             throw IllegalArgumentException("BPM cannot be below zero")
         }
 
-        coroutineScope.launch {
+        beatJob = coroutineScope.launch {
             while(true) {
                 playBeat()
                 delayWithFloat(interval)
@@ -46,5 +48,9 @@ class BeatManager(private val coroutineScope: CoroutineScope, private val bpm: F
     suspend fun delayWithFloat(floatDelay: Float) {
         val milliseconds = (floatDelay * 1000).toLong()
         delay(milliseconds)
+    }
+
+    fun pause() {
+        beatJob?.cancel()
     }
 }

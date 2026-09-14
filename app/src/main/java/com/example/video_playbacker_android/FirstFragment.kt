@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.content.ContentProviderCompat
 import androidx.fragment.app.activityViewModels
@@ -80,7 +81,7 @@ class FirstFragment : Fragment() {
                         }
 
                         is YoutubeDataUiState.Loading -> {
-                            // Show a progress bar if you have one
+
                         }
 
                         is YoutubeDataUiState.Error -> {
@@ -103,18 +104,19 @@ class FirstFragment : Fragment() {
 
                             layoutBinding.removeAllViews()
                             for (i in 1..timeSig) {
-                                val beatView = BeatCircleView(requireContext())
+                                val beatView = BeatCircleView(requireContext()).apply {
+                                    layoutParams = LinearLayout.LayoutParams(48, 48)
+                                }
                                 beatViews.add(beatView)
                                 layoutBinding.addView(beatView)
                             }
                             beatManager = BeatManager(viewLifecycleOwner.lifecycleScope, state.bpm, state.beatFrames, beatViews)
                             Log.i(TAG, "onViewCreated: state.bpm: ${state.bpm}")
-
                             // handle beats in UI
                         }
 
                         is BeatsDataUiState.Loading -> {
-                            // Show a progress bar if you have one
+                            binding.dashboard.beatsLoadingText.text = "Loading..."
                             beatManager = null
                         }
 

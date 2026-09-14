@@ -2,6 +2,7 @@ package com.example.video_playbacker_android.ui
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.Log
@@ -18,14 +19,15 @@ class BeatCircleView @JvmOverloads constructor(
         set(value) {
             Log.i(TAG, ": setting enabled to $value")
             field = value
-            circlePaint.style = if (value == true) Paint.Style.FILL_AND_STROKE else Paint.Style.STROKE
+            circlePaint.style = if (value) Paint.Style.FILL_AND_STROKE else Paint.Style.STROKE
             invalidate()
         }
     private var diameter = 0f
 
     private val circlePaint = Paint().apply {
         style = Paint.Style.STROKE
-        color = 0x0
+        strokeWidth = 4f
+        color = Color.WHITE
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
