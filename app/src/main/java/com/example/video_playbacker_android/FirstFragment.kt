@@ -32,8 +32,8 @@ private const val TAG = "Main fragment"
 class FirstFragment : Fragment() {
     private val viewModel: PlayerViewModel by activityViewModels()
     private var _binding: FragmentFirstBinding? = null
-    private var videoPlayer: VideoPlayer? = null
-    private var beatManager: BeatManager? = null
+    private var ytVideoPlayer: YouTubePlayer? = null
+    private val beatViews = ArrayList<BeatCircleView>(4)
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -57,6 +57,7 @@ class FirstFragment : Fragment() {
         // Use the new VideoListAdapter and pass the click lambda
         val adapter = VideoListAdapter { video ->
             viewModel.setChosenVideo(video)
+            video.id?.videoId?.let { ytVideoPlayer?.loadVideo(it, 0f) }
             Log.i(TAG, "onViewCreated: Selecting video: $video")
         }
 
@@ -98,34 +99,50 @@ class FirstFragment : Fragment() {
                 viewModel.beatsUiState.collect { state ->
                     when (state) {
                         is BeatsDataUiState.Success -> {
-                            val timeSig = 4
                             val layoutBinding = binding.dashboard.beatsSection
-                            val beatViews = ArrayList<BeatCircleView>(timeSig)
 
                             layoutBinding.removeAllViews()
-                            for (i in 1..timeSig) {
+                            for (i in 1..viewModel.timeSig) {
                                 val beatView = BeatCircleView(requireContext()).apply {
                                     layoutParams = LinearLayout.LayoutParams(48, 48)
                                 }
                                 beatViews.add(beatView)
                                 layoutBinding.addView(beatView)
                             }
-                            beatManager = BeatManager(viewLifecycleOwner.lifecycleScope, state.bpm, state.beatFrames, beatViews)
+                            viewModel.setBeatManager(state.bpm, state.beatFrames)
                             Log.i(TAG, "onViewCreated: state.bpm: ${state.bpm}")
-                            // handle beats in UI
                         }
 
                         is BeatsDataUiState.Loading -> {
                             binding.dashboard.beatsLoadingText.text = "Loading..."
-                            beatManager = null
+                            viewModel.clearBeatManager() //TODO: do we want to set to null?
                         }
 
                         is BeatsDataUiState.Error -> {
                             // Show an error message
-                            beatManager = null
+                            viewModel.clearBeatManager()
                             Toast.makeText(requireContext(), state.errorMsg, Toast.LENGTH_SHORT).show()
                         }
                     }
+                }
+            }
+        }
+
+        fun playBeat(currBeat: Int, timeSig: Int) {
+            for (i in 0..<currBeat) {
+                beatViews[i].isEnabledOption = true
+            }
+            Log.i(TAG, "playBeat: ${timeSig-currBeat} beats disabled")
+            for (i in currBeat..<timeSig) {
+                beatViews[i].isEnabledOption = false
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.beatIndex.collect { beatIndex ->
+                    if (beatViews.size != viewModel.timeSig) return@collect
+                    playBeat(beatIndex, viewModel.timeSig)
                 }
             }
         }
@@ -134,14 +151,16 @@ class FirstFragment : Fragment() {
 
         binding.youtubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
             override fun onReady(youTubePlayer: YouTubePlayer) {
-                videoPlayer = VideoPlayer(youTubePlayer, viewModel, lifecycleScope, viewLifecycleOwner)
+                ytVideoPlayer = youTubePlayer
             }
 
             override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
                 super.onCurrentSecond(youTubePlayer, second)
-                val player = videoPlayer ?: return
+                val player = viewModel.videoPlayer ?: return
                 player.currentSecond = second
-                player.checkLoop()
+                if(player.checkLoop())  {
+                    ytVideoPlayer?.seekTo(player.loopStart?: 0f)
+                }
                 val progress = ((player.currentSecond / player.videoDuration) * 100).roundToInt()
                 binding.dashboard.progressBar.progress = progress
             }
@@ -151,38 +170,38 @@ class FirstFragment : Fragment() {
                 state: PlayerConstants.PlayerState
             ) {
                 super.onStateChange(youTubePlayer, state)
-                videoPlayer?.playerState = state
+                viewModel.videoPlayer?.playerState = state
             }
 
             override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
-                videoPlayer?.videoDuration = duration
+                viewModel.videoPlayer?.videoDuration = duration
             }
         })
 
         // Dashboard listeners
         binding.dashboard.rewind.setOnClickListener {
             val rewindTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
-            val current = videoPlayer?.currentSecond ?: 0f
-            videoPlayer?.seekTo(current - rewindTime)
+            val current = viewModel.videoPlayer?.currentSecond ?: 0f
+            ytVideoPlayer?.seekTo(current - rewindTime)
         }
 
         binding.dashboard.fastForward.setOnClickListener {
             val ffTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
-            val current = videoPlayer?.currentSecond ?: 0f
-            videoPlayer?.seekTo(current + ffTime)
+            val current = viewModel.videoPlayer?.currentSecond ?: 0f
+            ytVideoPlayer?.seekTo(current + ffTime)
         }
 
         binding.dashboard.pause.setOnClickListener {
-            videoPlayer?.pauseOrPlay()
+            if (viewModel.videoPlayer?.playerState == PlayerState.PLAYING) ytVideoPlayer?.pause() else ytVideoPlayer?.play()
         }
 
         binding.dashboard.loopButton.setOnClickListener {
-            val isRecording = videoPlayer?.handleLoop() == true
+            val isRecording = viewModel.videoPlayer?.startStopLoop() == true
             stopStartRecording(isRecording)
         }
 
         binding.dashboard.clearButton.setOnClickListener {
-            videoPlayer?.clearLoop()
+            viewModel.videoPlayer?.clearLoop()
             stopStartRecording(false)
         }
     }
@@ -197,8 +216,8 @@ class FirstFragment : Fragment() {
             if (isRecording) R.string.stop_loop else R.string.start_loop
         )
 
-        val start = videoPlayer?.loopStart
-        val end = videoPlayer?.loopEnd
+        val start = viewModel.videoPlayer?.loopStart
+        val end = viewModel.videoPlayer?.loopEnd
 
         binding.dashboard.tvCurrentText.text = when {
             isRecording -> "Current Loop: $start to ..."

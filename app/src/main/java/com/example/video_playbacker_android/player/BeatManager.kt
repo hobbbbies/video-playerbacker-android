@@ -10,11 +10,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
 private const val TAG = "BeatManager"
-class BeatManager(private val coroutineScope: CoroutineScope, private val bpm: Float, private val beatFrames: List<Int>, private val beatViews: List<BeatCircleView>, private val timeSig: Int = 4) {
+class BeatManager(private val coroutineScope: CoroutineScope, private val bpm: Float, private val beatFrames: List<Float>, private val timeSig: Int = 4, private val beatIndex: MutableStateFlow<Int>) {
     private val interval = 60 / bpm
     private var currBeat = 1
     private var beatJob: Job? = null
@@ -35,14 +37,8 @@ class BeatManager(private val coroutineScope: CoroutineScope, private val bpm: F
 
     suspend fun playBeat() = withContext(Dispatchers.Main) {
         Log.i(TAG, "playBeat: $currBeat beats enabled")
-        for (i in 0..<currBeat) {
-            beatViews[i].isEnabledOption = true
-        }
-        Log.i(TAG, "playBeat: ${timeSig-currBeat} beats disabled")
-        for (i in currBeat..<timeSig) {
-            beatViews[i].isEnabledOption = false
-        }
         currBeat = (currBeat % timeSig) + 1
+        beatIndex.value = currBeat
     }
 
     suspend fun delayWithFloat(floatDelay: Float) {

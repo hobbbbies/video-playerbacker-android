@@ -5,11 +5,14 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import com.example.video_playbacker_android.network.VideoItem
 import com.example.video_playbacker_android.network.VideoSearchSnippet
 import com.example.video_playbacker_android.network.YoutubeDataApi
 import com.example.video_playbacker_android.network.PythonApi
+import com.example.video_playbacker_android.player.BeatManager
+import com.example.video_playbacker_android.player.VideoPlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +28,7 @@ sealed interface YoutubeDataUiState {
 }
 
 sealed interface BeatsDataUiState {
-    data class Success(val bpm: Float, val beatFrames: List<Int>) : BeatsDataUiState
+    data class Success(val bpm: Float, val beatFrames: List<Float>) : BeatsDataUiState
     data class Error(val errorMsg: String) : BeatsDataUiState
     object Loading : BeatsDataUiState
 }
@@ -36,6 +39,13 @@ class PlayerViewModel(): ViewModel() {
     val searchUiState = _searchUiState.asStateFlow()
     private val _beatsUiState = MutableStateFlow<BeatsDataUiState>(BeatsDataUiState.Loading)
     val beatsUiState = _beatsUiState.asStateFlow()
+
+    private var beatManager: BeatManager? = null
+    val videoPlayer = VideoPlayer()
+
+    private val _beatIndex = MutableStateFlow<Int>(0)
+    val beatIndex = _beatIndex.asStateFlow()
+    val timeSig = 4
 
     private val _chosenVideo = MutableStateFlow<VideoItem?>(null)
     val chosenVideo = _chosenVideo.asStateFlow()
@@ -68,5 +78,13 @@ class PlayerViewModel(): ViewModel() {
                 _beatsUiState.value = BeatsDataUiState.Error(e.message ?: "An error occurred.")
             }
         }
+    }
+
+    fun setBeatManager(bpm: Float, beatFrames: List<Float>) {
+        beatManager = BeatManager(viewModelScope, bpm, beatFrames, timeSig, _beatIndex)
+    }
+
+    fun clearBeatManager() {
+        beatManager = null
     }
 }

@@ -66,5 +66,5 @@ data class BeatsResponse(
     val bpm: Float,
 
     @SerialName("beat_frames")
-    val beatFrames: List<Int>
+    val beatFrames: List<Float>
 )
