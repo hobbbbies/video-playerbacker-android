@@ -1,25 +1,18 @@
 package com.example.video_playbacker_android
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import com.example.video_playbacker_android.network.VideoItem
-import com.example.video_playbacker_android.network.VideoSearchSnippet
 import com.example.video_playbacker_android.network.YoutubeDataApi
 import com.example.video_playbacker_android.network.PythonApi
 import com.example.video_playbacker_android.player.BeatManager
-import com.example.video_playbacker_android.player.VideoPlayer
-import kotlinx.coroutines.Dispatchers
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.net.URL
 
 sealed interface YoutubeDataUiState {
     data class Success(val videos: List<VideoItem>) : YoutubeDataUiState
@@ -33,6 +26,19 @@ sealed interface BeatsDataUiState {
     object Loading : BeatsDataUiState
 }
 
+data class PlayerUiState(
+    val currentSecond: Float = 0f,
+    val duration: Float = 0f,
+    val playerState: PlayerState = PlayerState.UNKNOWN,
+    val loopStart: Float? = null,
+    val loopEnd: Float? = null,
+    val isRecordingLoop: Boolean = false,
+)
+
+sealed interface PlayerEffect {
+    data class SeekTo(val second: Float) : PlayerEffect
+}
+
 private const val TAG = "Viewmodel"
 class PlayerViewModel(): ViewModel() {
     private val _searchUiState = MutableStateFlow<YoutubeDataUiState>(YoutubeDataUiState.Loading)
@@ -41,7 +47,12 @@ class PlayerViewModel(): ViewModel() {
     val beatsUiState = _beatsUiState.asStateFlow()
 
     private var beatManager: BeatManager? = null
-    val videoPlayer = VideoPlayer()
+
+    private val _playerUiState = MutableStateFlow(PlayerUiState())
+    val playerUiState = _playerUiState.asStateFlow()
+
+    private val _playerEffects = MutableSharedFlow<PlayerEffect>(extraBufferCapacity = 1)
+    val playerEffects = _playerEffects.asSharedFlow()
 
     private val _beatIndex = MutableStateFlow<Int>(0)
     val beatIndex = _beatIndex.asStateFlow()
@@ -68,6 +79,58 @@ class PlayerViewModel(): ViewModel() {
         if (videoId != null) getBeats(videoId)
     }
 
+    fun onCurrentSecondChanged(second: Float) {
+        val state = _playerUiState.value.copy(currentSecond = second)
+        _playerUiState.value = state
+
+        val loopStart = state.loopStart
+        val loopEnd = state.loopEnd
+        if (loopStart != null && loopEnd != null &&
+            (second >= loopEnd || second < loopStart)
+        ) {
+            _playerEffects.tryEmit(PlayerEffect.SeekTo(loopStart))
+        }
+        _beatIndex.value = beatManager?.beatIndexAt(second) ?: _beatIndex.value
+    }
+
+    // .copy is pattern for data class flows
+    fun onPlayerStateChanged(state: PlayerState) {
+        _playerUiState.value = _playerUiState.value.copy(playerState = state)
+    }
+
+    fun onVideoDurationChanged(duration: Float) {
+        _playerUiState.value = _playerUiState.value.copy(duration = duration)
+    }
+
+    fun toggleLoop() {
+        val state = _playerUiState.value
+        _playerUiState.value = if (!state.isRecordingLoop) {
+            state.copy(
+                loopStart = state.currentSecond,
+                loopEnd = null,
+                isRecordingLoop = true,
+            )
+        } else {
+            val loopStart = state.loopStart
+            if (loopStart != null && state.currentSecond - loopStart > 1f) {
+                state.copy(
+                    loopEnd = state.currentSecond,
+                    isRecordingLoop = false,
+                )
+            } else {
+                state
+            }
+        }
+    }
+
+    fun clearLoop() {
+        _playerUiState.value = _playerUiState.value.copy(
+            loopStart = null,
+            loopEnd = null,
+            isRecordingLoop = false,
+        )
+    }
+
     fun getBeats(videoId: String) {
         Log.i(TAG, "getBeats: getting beats...")
         viewModelScope.launch {
@@ -81,7 +144,7 @@ class PlayerViewModel(): ViewModel() {
     }
 
     fun setBeatManager(bpm: Float, beatFrames: List<Float>) {
-        beatManager = BeatManager(viewModelScope, bpm, beatFrames, timeSig, _beatIndex)
+        beatManager = BeatManager(bpm, beatFrames, timeSig)
     }
 
     fun clearBeatManager() {

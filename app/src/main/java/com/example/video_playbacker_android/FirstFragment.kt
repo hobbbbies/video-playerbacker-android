@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.core.content.ContentProviderCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -16,15 +15,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.video_playbacker_android.ui.VideoListAdapter
 import com.example.video_playbacker_android.databinding.FragmentFirstBinding
-import com.example.video_playbacker_android.player.BeatManager
-import com.example.video_playbacker_android.player.VideoPlayer
 import com.example.video_playbacker_android.ui.BeatCircleView
-import com.example.video_playbacker_android.ui.BeatView
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants.PlayerState
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTubePlayerTracker
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -147,6 +142,22 @@ class FirstFragment : Fragment() {
             }
         }
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.playerUiState.collect(::renderPlayerState)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.playerEffects.collect { effect ->
+                    when (effect) {
+                        is PlayerEffect.SeekTo -> ytVideoPlayer?.seekTo(effect.second)
+                    }
+                }
+            }
+        }
+
         lifecycle.addObserver(binding.youtubePlayerView)
 
         binding.youtubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
@@ -156,13 +167,7 @@ class FirstFragment : Fragment() {
 
             override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
                 super.onCurrentSecond(youTubePlayer, second)
-                val player = viewModel.videoPlayer ?: return
-                player.currentSecond = second
-                if(player.checkLoop())  {
-                    ytVideoPlayer?.seekTo(player.loopStart?: 0f)
-                }
-                val progress = ((player.currentSecond / player.videoDuration) * 100).roundToInt()
-                binding.dashboard.progressBar.progress = progress
+                viewModel.onCurrentSecondChanged(second)
             }
 
             override fun onStateChange(
@@ -170,39 +175,41 @@ class FirstFragment : Fragment() {
                 state: PlayerConstants.PlayerState
             ) {
                 super.onStateChange(youTubePlayer, state)
-                viewModel.videoPlayer?.playerState = state
+                viewModel.onPlayerStateChanged(state)
             }
 
             override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
-                viewModel.videoPlayer?.videoDuration = duration
+                viewModel.onVideoDurationChanged(duration)
             }
         })
 
         // Dashboard listeners
         binding.dashboard.rewind.setOnClickListener {
             val rewindTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
-            val current = viewModel.videoPlayer?.currentSecond ?: 0f
+            val current = viewModel.playerUiState.value.currentSecond
             ytVideoPlayer?.seekTo(current - rewindTime)
         }
 
         binding.dashboard.fastForward.setOnClickListener {
             val ffTime = binding.dashboard.skipTimeInput.text.toString().toFloatOrNull() ?: 5f
-            val current = viewModel.videoPlayer?.currentSecond ?: 0f
+            val current = viewModel.playerUiState.value.currentSecond
             ytVideoPlayer?.seekTo(current + ffTime)
         }
 
         binding.dashboard.pause.setOnClickListener {
-            if (viewModel.videoPlayer?.playerState == PlayerState.PLAYING) ytVideoPlayer?.pause() else ytVideoPlayer?.play()
+            if (viewModel.playerUiState.value.playerState == PlayerState.PLAYING) {
+                ytVideoPlayer?.pause()
+            } else {
+                ytVideoPlayer?.play()
+            }
         }
 
         binding.dashboard.loopButton.setOnClickListener {
-            val isRecording = viewModel.videoPlayer?.startStopLoop() == true
-            stopStartRecording(isRecording)
+            viewModel.toggleLoop()
         }
 
         binding.dashboard.clearButton.setOnClickListener {
-            viewModel.videoPlayer?.clearLoop()
-            stopStartRecording(false)
+            viewModel.clearLoop()
         }
     }
 
@@ -211,17 +218,22 @@ class FirstFragment : Fragment() {
         _binding = null
     }
 
-    fun stopStartRecording(isRecording: Boolean) {
+    private fun renderPlayerState(state: PlayerUiState) {
+        binding.dashboard.progressBar.progress = if (state.duration > 0f) {
+            ((state.currentSecond / state.duration) * 100).roundToInt().coerceIn(0, 100)
+        } else {
+            0
+        }
+
         binding.dashboard.loopButton.setText(
-            if (isRecording) R.string.stop_loop else R.string.start_loop
+            if (state.isRecordingLoop) R.string.stop_loop else R.string.start_loop
         )
 
-        val start = viewModel.videoPlayer?.loopStart
-        val end = viewModel.videoPlayer?.loopEnd
-
         binding.dashboard.tvCurrentText.text = when {
-            isRecording -> "Current Loop: $start to ..."
-            start != null && end != null -> getString(R.string.current_loop_value, start, end)
+            state.isRecordingLoop -> "Current Loop: ${state.loopStart} to ..."
+            state.loopStart != null && state.loopEnd != null -> {
+                getString(R.string.current_loop_value, state.loopStart, state.loopEnd)
+            }
             else -> getString(R.string.current_loop_null_value)
         }
     }

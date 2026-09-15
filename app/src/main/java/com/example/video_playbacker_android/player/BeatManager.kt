@@ -16,29 +16,30 @@ import kotlinx.coroutines.withContext
 
 
 private const val TAG = "BeatManager"
-class BeatManager(private val coroutineScope: CoroutineScope, private val bpm: Float, private val beatFrames: List<Float>, private val timeSig: Int = 4, private val beatIndex: MutableStateFlow<Int>) {
+class BeatManager(private val bpm: Float, private val beatFrames: List<Float>, private val timeSig: Int = 4) {
     private val interval = 60 / bpm
     private var currBeat = 1
     private var beatJob: Job? = null
 
     init {
-        if (bpm < 1) {
-            throw IllegalArgumentException("BPM cannot be below zero")
-        }
-
-        beatJob = coroutineScope.launch {
-            while(true) {
-                playBeat()
-                delayWithFloat(interval)
-                Log.i(TAG, ": beat!")
-            }
+        require(timeSig > 0)
+        require(beatFrames.zipWithNext().all { (a, b) -> a <= b }) {
+            "Beat frames must be sorted"
         }
     }
 
-    suspend fun playBeat() = withContext(Dispatchers.Main) {
-        Log.i(TAG, "playBeat: $currBeat beats enabled")
-        currBeat = (currBeat % timeSig) + 1
-        beatIndex.value = currBeat
+    fun beatIndexAt(second: Float): Int? {
+        val result = beatFrames.binarySearch(second)
+
+        val frameIndex = if (result >= 0) {
+            result
+        } else {
+            -result - 2 // not found
+        }
+
+        if (frameIndex < 0) return null
+
+        return (frameIndex % timeSig) + 1
     }
 
     suspend fun delayWithFloat(floatDelay: Float) {
