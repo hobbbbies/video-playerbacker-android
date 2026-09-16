@@ -139,11 +139,5 @@
         app:layout_constraintBottom_toBottomOf="parent"
         >
 
-    <TextView
-        android:id="@+id/beats_loading_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-    ></TextView>
-
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

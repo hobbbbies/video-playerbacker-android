@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -92,11 +93,13 @@ class FirstFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.beatsUiState.collect { state ->
+                    val layoutBinding = binding.dashboard.beatsSection
+                    layoutBinding.removeAllViews()
                     when (state) {
                         is BeatsDataUiState.Success -> {
                             val layoutBinding = binding.dashboard.beatsSection
 
-                            layoutBinding.removeAllViews()
+                            beatViews.clear()
                             for (i in 1..viewModel.timeSig) {
                                 val beatView = BeatCircleView(requireContext()).apply {
                                     layoutParams = LinearLayout.LayoutParams(48, 48)
@@ -109,7 +112,14 @@ class FirstFragment : Fragment() {
                         }
 
                         is BeatsDataUiState.Loading -> {
-                            binding.dashboard.beatsLoadingText.text = "Loading..."
+                            val textView = TextView(requireContext()).apply {
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                )
+                            }
+                            textView.text = "Loading..."
+                            layoutBinding.addView(textView)
                             viewModel.clearBeatManager() //TODO: do we want to set to null?
                         }
 
@@ -136,7 +146,11 @@ class FirstFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.beatIndex.collect { beatIndex ->
-                    if (beatViews.size != viewModel.timeSig) return@collect
+                     Log.i(TAG, "onViewCreated: beatIndex: $beatIndex")
+                    if (beatViews.size != viewModel.timeSig) {
+                        Log.i(TAG, "onViewCreated: returning because beatsViews.size != viewModel.timeSig (${beatViews.size} vs ${viewModel.timeSig})")
+                        return@collect
+                    }
                     playBeat(beatIndex, viewModel.timeSig)
                 }
             }
@@ -163,6 +177,13 @@ class FirstFragment : Fragment() {
         binding.youtubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
             override fun onReady(youTubePlayer: YouTubePlayer) {
                 ytVideoPlayer = youTubePlayer
+                val currentSecond = viewModel.playerUiState.value.currentSecond
+//                if (currentSecond != 0f) {
+//                    ytVideoPlayer?.play()
+//                    Log.i(TAG, "onReady: Seeking to $currentSecond after rotation")
+//                    Log.i(TAG, "onReady: ytVideoplayer initialized: ${ytVideoPlayer !== null}")
+//                    ytVideoPlayer?.seekTo(currentSecond)
+//                }
             }
 
             override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
@@ -175,7 +196,15 @@ class FirstFragment : Fragment() {
                 state: PlayerConstants.PlayerState
             ) {
                 super.onStateChange(youTubePlayer, state)
+                Log.i(TAG, "onStateChange: State: $state")
                 viewModel.onPlayerStateChanged(state)
+                val currentSecond = viewModel.playerUiState.value.currentSecond
+                if (currentSecond != 0f && (state == PlayerState.VIDEO_CUED)) { // TODO: we dont want to do this if state before rotation was PAUSED
+                    ytVideoPlayer?.play()
+                    Log.i(TAG, "onReady: Seeking to $currentSecond after rotation")
+                    Log.i(TAG, "onReady: ytVideoplayer initialized: ${ytVideoPlayer !== null}")
+                    ytVideoPlayer?.seekTo(currentSecond)
+                }
             }
 
             override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {

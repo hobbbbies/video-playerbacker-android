@@ -86,7 +86,7 @@ class PlayerViewModel(): ViewModel() {
         val loopStart = state.loopStart
         val loopEnd = state.loopEnd
         if (loopStart != null && loopEnd != null &&
-            (second >= loopEnd || second < loopStart)
+            (second !in loopStart..<loopEnd)
         ) {
             _playerEffects.tryEmit(PlayerEffect.SeekTo(loopStart))
         }
@@ -133,6 +133,7 @@ class PlayerViewModel(): ViewModel() {
 
     fun getBeats(videoId: String) {
         Log.i(TAG, "getBeats: getting beats...")
+        _beatsUiState.value = BeatsDataUiState.Loading
         viewModelScope.launch {
             try {
                 val result = PythonApi.retrofitService.beats(videoId)
