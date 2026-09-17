@@ -64,6 +64,11 @@ interface PythonApiService {
     suspend fun beats(
         @Query("url") url: String
     ): BeatsResponse
+
+    @GET("key")
+    suspend fun key(
+        @Query("url") url: String
+    ): KeyResponse
 }
 
 object PythonApi {

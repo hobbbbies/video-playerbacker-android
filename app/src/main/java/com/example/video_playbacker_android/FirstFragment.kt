@@ -30,6 +30,7 @@ class FirstFragment : Fragment() {
     private var _binding: FragmentFirstBinding? = null
     private var ytVideoPlayer: YouTubePlayer? = null
     private val beatViews = ArrayList<BeatCircleView>(4)
+    private var autoPlayAfterRotation = false
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -126,6 +127,27 @@ class FirstFragment : Fragment() {
                         is BeatsDataUiState.Error -> {
                             // Show an error message
                             viewModel.clearBeatManager()
+                            Log.e(TAG, "onViewCreated: ${state.errorMsg}", )
+                            Toast.makeText(requireContext(), state.errorMsg, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.keyUiState.collect { state ->
+                    when (state) {
+                        is KeyDataUiState.Success -> {
+                            Log.i(TAG, "onViewCreated: Detected key: ${state.key}")
+                            binding.dashboard.tvKey.text = state.key
+                        }
+                        is KeyDataUiState.Loading -> {
+                            binding.dashboard.tvKey.text = "Loading..."
+                        }
+                        is KeyDataUiState.Error -> {
+                            Log.e(TAG, "onViewCreated: ${state.errorMsg}", )
                             Toast.makeText(requireContext(), state.errorMsg, Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -199,11 +221,12 @@ class FirstFragment : Fragment() {
                 Log.i(TAG, "onStateChange: State: $state")
                 viewModel.onPlayerStateChanged(state)
                 val currentSecond = viewModel.playerUiState.value.currentSecond
-                if (currentSecond != 0f && (state == PlayerState.VIDEO_CUED)) { // TODO: we dont want to do this if state before rotation was PAUSED
-                    ytVideoPlayer?.play()
+                if (currentSecond != 0f && (state == PlayerState.VIDEO_CUED)) { // TODO: Bug where goes black
+                    ytVideoPlayer?.seekTo(currentSecond)
+                    if (!autoPlayAfterRotation) ytVideoPlayer?.pause()
+                    autoPlayAfterRotation = false
                     Log.i(TAG, "onReady: Seeking to $currentSecond after rotation")
                     Log.i(TAG, "onReady: ytVideoplayer initialized: ${ytVideoPlayer !== null}")
-                    ytVideoPlayer?.seekTo(currentSecond)
                 }
             }
 
@@ -240,6 +263,13 @@ class FirstFragment : Fragment() {
         binding.dashboard.clearButton.setOnClickListener {
             viewModel.clearLoop()
         }
+    }
+
+
+    // runs after onViewCreated
+    override fun onStart() {
+        super.onStart()
+        if (viewModel.playerUiState.value.playerState == PlayerConstants.PlayerState.PLAYING) autoPlayAfterRotation = true
     }
 
     override fun onDestroyView() {

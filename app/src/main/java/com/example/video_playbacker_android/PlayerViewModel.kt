@@ -26,6 +26,12 @@ sealed interface BeatsDataUiState {
     object Loading : BeatsDataUiState
 }
 
+sealed interface KeyDataUiState {
+    data class Success(val key: String) : KeyDataUiState
+    data class Error(val errorMsg: String) : KeyDataUiState
+    object Loading : KeyDataUiState
+}
+
 data class PlayerUiState(
     val currentSecond: Float = 0f,
     val duration: Float = 0f,
@@ -45,6 +51,8 @@ class PlayerViewModel(): ViewModel() {
     val searchUiState = _searchUiState.asStateFlow()
     private val _beatsUiState = MutableStateFlow<BeatsDataUiState>(BeatsDataUiState.Loading)
     val beatsUiState = _beatsUiState.asStateFlow()
+    private val _keyUiState = MutableStateFlow<KeyDataUiState>(KeyDataUiState.Loading)
+    val keyUiState = _keyUiState.asStateFlow()
 
     private var beatManager: BeatManager? = null
 
@@ -76,7 +84,10 @@ class PlayerViewModel(): ViewModel() {
     fun setChosenVideo(video: VideoItem) {
         _chosenVideo.value = video
         val videoId = video.id.videoId
-        if (videoId != null) getBeats(videoId)
+        if (videoId != null) {
+            getBeats(videoId)
+            getKey(videoId)
+        }
     }
 
     fun onCurrentSecondChanged(second: Float) {
@@ -140,6 +151,19 @@ class PlayerViewModel(): ViewModel() {
                 _beatsUiState.value = BeatsDataUiState.Success(result.bpm, result.beatFrames)
             } catch(e: Exception) {
                 _beatsUiState.value = BeatsDataUiState.Error(e.message ?: "An error occurred.")
+            }
+        }
+    }
+
+    fun getKey(videoId: String) {
+        Log.i(TAG, "getKey: getting key...")
+        _keyUiState.value = KeyDataUiState.Loading
+        viewModelScope.launch {
+            try {
+                val result = PythonApi.retrofitService.key(videoId)
+                _keyUiState.value = KeyDataUiState.Success(result.key)
+            } catch(e: Exception) {
+                _keyUiState.value = KeyDataUiState.Error(e.message ?: "An error occurred.")
             }
         }
     }

@@ -68,3 +68,8 @@ data class BeatsResponse(
     @SerialName("beat_frames")
     val beatFrames: List<Float>
 )
+
+@Serializable
+data class KeyResponse(
+    val key: String
+)
